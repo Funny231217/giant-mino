@@ -1,0 +1,166 @@
+<!doctype html>
+<html lang="ja">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover" />
+    <meta name="theme-color" content="#070814" />
+    <meta name="description" content="10個に1個、縦横2倍のGIANT MINOが降ってくるブラウザ落ち物パズル" />
+    <title>GIANT MINO</title>
+    <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 6 4'%3E%3Cpath fill='%23b467ff' d='M2 0h2v2h2v2H0V2h2z'/%3E%3C/svg%3E" />
+  </head>
+  <body>
+    <div id="app">
+      <div id="stage" class="stage" aria-hidden="false">
+        <aside class="side side-left">
+          <section class="card">
+            <h2>HOLD</h2>
+            <canvas id="hold-canvas" aria-label="HOLD"></canvas>
+          </section>
+          <section class="stat"><h3>LEVEL</h3><div id="hud-level" class="value">1</div></section>
+          <section class="stat"><h3>SCORE</h3><div id="hud-score" class="value">0</div></section>
+          <section class="stat"><h3>COMBO</h3><div id="hud-combo" class="value">—</div></section>
+          <section class="stat stat-giant" id="hud-giant-box">
+            <h3>NEXT GIANT</h3>
+            <div class="value"><span id="hud-giant">10</span></div>
+            <p class="note">NEXT先頭を 1 として数えた供給位置</p>
+          </section>
+        </aside>
+
+        <div class="field-wrap">
+          <canvas id="field-canvas" aria-label="フィールド"></canvas>
+          <div id="b2b-badge" class="b2b-badge">B2B</div>
+          <button id="btn-touch-pause" class="touch-pause" type="button" aria-label="一時停止">❚❚</button>
+        </div>
+
+        <aside class="side side-right">
+          <section class="card">
+            <h2>NEXT</h2>
+            <canvas id="next-canvas" aria-label="NEXT"></canvas>
+          </section>
+          <section class="stat"><h3>LINES</h3><div id="hud-lines" class="value">0</div></section>
+          <section class="stat"><h3>BEST</h3><div id="hud-best" class="value">0</div></section>
+          <section class="stat stat-time"><h3>TIME</h3><div id="hud-time" class="value">0:00</div></section>
+        </aside>
+      </div>
+
+      <div id="touch" class="touch">
+        <div class="cluster cluster-left">
+          <button type="button" data-code="TouchHold" class="tbtn tbtn-hold">HOLD</button>
+          <div class="row">
+            <button type="button" data-code="TouchLeft" class="tbtn" aria-label="左">◀</button>
+            <button type="button" data-code="TouchSoft" class="tbtn" aria-label="ソフトドロップ">▼</button>
+            <button type="button" data-code="TouchRight" class="tbtn" aria-label="右">▶</button>
+          </div>
+        </div>
+        <div class="cluster cluster-right">
+          <div class="row">
+            <button type="button" data-code="TouchCCW" class="tbtn" aria-label="左回転">⟲</button>
+            <button type="button" data-code="TouchCW" class="tbtn" aria-label="右回転">⟳</button>
+          </div>
+          <button type="button" data-code="TouchHard" class="tbtn tbtn-hard" aria-label="ハードドロップ">⤓ DROP</button>
+        </div>
+      </div>
+
+      <!-- タイトル -->
+      <div id="screen-title" class="overlay show">
+        <div class="panel panel-title">
+          <h1 class="logo"><span class="logo-giant">GIANT</span><span class="logo-mino">MINO</span></h1>
+          <p class="tagline">10個に1個、<strong>縦横2倍・16マス</strong>の巨大ミノが降ってくる。</p>
+          <div class="buttons">
+            <button type="button" class="btn btn-primary" data-act="start">START <kbd>Enter</kbd></button>
+            <button type="button" class="btn" data-act="settings">SETTINGS</button>
+          </div>
+          <table class="controls">
+            <tr><td>移動</td><td><kbd>←</kbd> <kbd>→</kbd></td></tr>
+            <tr><td>ソフトドロップ</td><td><kbd>↓</kbd></td></tr>
+            <tr><td>ハードドロップ</td><td><kbd>Space</kbd></td></tr>
+            <tr><td>右回転 / 左回転</td><td><kbd>↑</kbd> <kbd>X</kbd> / <kbd>Z</kbd></td></tr>
+            <tr><td>HOLD</td><td><kbd>C</kbd> <kbd>Shift</kbd></td></tr>
+            <tr><td>一時停止</td><td><kbd>P</kbd> <kbd>Esc</kbd></td></tr>
+            <tr><td>BGMミュート</td><td><kbd>M</kbd></td></tr>
+          </table>
+        </div>
+      </div>
+
+      <!-- ポーズ -->
+      <div id="screen-paused" class="overlay">
+        <div class="panel">
+          <h2 class="panel-heading">PAUSED</h2>
+          <div class="buttons">
+            <button type="button" class="btn btn-primary" data-act="resume">RESUME <kbd>P</kbd></button>
+            <button type="button" class="btn" data-act="restart">RESTART</button>
+            <button type="button" class="btn" data-act="settings">SETTINGS</button>
+            <button type="button" class="btn" data-act="title">TITLE</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- ゲームオーバー -->
+      <div id="screen-gameover" class="overlay">
+        <div class="panel">
+          <h2 class="panel-heading heading-over">GAME OVER</h2>
+          <div id="go-best" class="new-best">NEW BEST!</div>
+          <dl class="results">
+            <dt>SCORE</dt><dd id="go-score">0</dd>
+            <dt>LINES</dt><dd id="go-lines">0</dd>
+            <dt>LEVEL</dt><dd id="go-level">1</dd>
+            <dt>TIME</dt><dd id="go-time">0:00</dd>
+          </dl>
+          <div class="buttons">
+            <button type="button" class="btn btn-primary" data-act="start">RETRY <kbd>Enter</kbd></button>
+            <button type="button" class="btn" data-act="title">TITLE</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- 設定 -->
+      <div id="screen-settings" class="overlay">
+        <div class="panel panel-settings">
+          <h2 class="panel-heading">SETTINGS</h2>
+          <form id="settings-form" class="settings" onsubmit="return false">
+            <label class="setting">
+              <span>DAS <small>長押しから連続移動までの時間</small></span>
+              <input type="range" name="das" min="0" max="400" step="5" />
+              <output data-for="das"></output>
+            </label>
+            <label class="setting">
+              <span>ARR <small>連続移動の間隔（0 = 端まで即移動）</small></span>
+              <input type="range" name="arr" min="0" max="100" step="1" />
+              <output data-for="arr"></output>
+            </label>
+            <label class="setting">
+              <span>BGM 音量</span>
+              <input type="range" name="bgmVolume" min="0" max="100" step="1" />
+              <output data-for="bgmVolume"></output>
+            </label>
+            <label class="setting">
+              <span>効果音 音量</span>
+              <input type="range" name="sfxVolume" min="0" max="100" step="1" />
+              <output data-for="sfxVolume"></output>
+            </label>
+            <div class="toggles">
+              <label class="check"><input type="checkbox" name="bgmMuted" /> BGMミュート</label>
+              <label class="check"><input type="checkbox" name="sfxMuted" /> 効果音ミュート</label>
+              <label class="check"><input type="checkbox" name="ghost" /> ゴースト表示</label>
+            </div>
+            <label class="setting setting-select">
+              <span>タッチボタン</span>
+              <select name="touchControls">
+                <option value="auto">自動</option>
+                <option value="on">常に表示</option>
+                <option value="off">非表示</option>
+              </select>
+            </label>
+          </form>
+          <div class="buttons buttons-row">
+            <button type="button" class="btn" data-act="reset-settings">初期値に戻す</button>
+            <button type="button" class="btn btn-primary" data-act="close-settings">閉じる <kbd>Esc</kbd></button>
+          </div>
+        </div>
+      </div>
+
+      <div id="toast" class="toast" role="status" aria-live="polite"></div>
+    </div>
+    <script type="module" src="./src/main.ts"></script>
+  </body>
+</html>
